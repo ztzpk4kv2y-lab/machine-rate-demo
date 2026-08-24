@@ -72,12 +72,13 @@ document.getElementById('nextMonth')?.addEventListener('click', () => {
 
 function renderKPI() {
   const stats = MACHINES.map(m => getMachineMonthStats(m.id, currentMonth.year, currentMonth.month));
-  const valid = stats.filter(s => s && s.avgRate != null);
+  const valid = stats.filter(s => s && s.machineRate != null);
 
-  const avg = valid.length ? (valid.reduce((a, b) => a + b.avgRate, 0) / valid.length) : 0;
-  const max = valid.length ? Math.max(...valid.map(s => s.avgRate)) : 0;
-  const low = valid.filter(s => s.avgRate < 70).length;
-  const active = valid.filter(s => s.workdays > 0).length;
+  const rates = valid.map(s => s.machineRate * 100);
+  const avg = rates.length ? (rates.reduce((a, b) => a + b, 0) / rates.length) : 0;
+  const max = rates.length ? Math.max(...rates) : 0;
+  const low = rates.filter(r => r < 70).length;
+  const active = valid.filter(s => s.workdayCount > 0).length;
 
   const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
   set('avgRate', avg.toFixed(1) + '%');
@@ -95,9 +96,9 @@ function renderProcessMap() {
     const machines = MACHINES.filter(m => m.process === proc);
     const chips = machines.map(m => {
       const stats = getMachineMonthStats(m.id, currentMonth.year, currentMonth.month);
-      const rate = stats?.avgRate ?? 0;
-      const color = rate >= 85 ? 'good' : rate >= 70 ? 'warn' : 'bad';
-      return `<a href="machine.html?id=${m.id}" class="machine-chip ${color}">${m.name}<br>${rate.toFixed(1)}%</a>`;
+      const rate = stats ? stats.machineRate * 100 : 0;
+      const color = !stats ? 'nodata' : rate >= 80 ? 'good' : rate >= 50 ? 'warn' : 'bad';
+      return `<a href="machine.html?id=${m.id}" class="machine-chip ${color}">${m.name}<br>${stats ? rate.toFixed(1) + '%' : 'データなし'}</a>`;
     }).join('');
     return `<div class="process-section"><div class="process-title">${proc}</div><div class="machine-chips">${chips}</div></div>`;
   }).join('');
@@ -109,7 +110,7 @@ function renderMachineRanking() {
 
   const stats = MACHINES.map(m => {
     const s = getMachineMonthStats(m.id, currentMonth.year, currentMonth.month);
-    return { name: m.name, id: m.id, rate: s?.avgRate ?? 0 };
+    return { name: m.name, id: m.id, rate: s ? s.machineRate * 100 : 0 };
   }).sort((a, b) => b.rate - a.rate);
 
   container.innerHTML = stats.map((s, i) => `
@@ -127,7 +128,7 @@ function renderOEERanking() {
 
   const stats = MACHINES.map(m => {
     const s = getMachineMonthStats(m.id, currentMonth.year, currentMonth.month);
-    return { name: m.name, id: m.id, oee: s?.avgOEE ?? 0 };
+    return { name: m.name, id: m.id, oee: s ? s.oee * 100 : 0 };
   }).sort((a, b) => b.oee - a.oee);
 
   container.innerHTML = stats.map((s, i) => `
@@ -156,10 +157,10 @@ function renderYearlyView() {
 
     for (let m = 1; m <= 12; m++) {
       const stats = getMachineMonthStats(machine.id, currentYear, m);
-      const rate = stats?.avgRate;
+      const rate = stats ? stats.machineRate * 100 : null;
       if (rate != null) { sum += rate; count++; }
       const display = rate != null ? rate.toFixed(1) + '%' : '-';
-      const colorClass = rate == null ? '' : rate >= 85 ? 'cell-good' : rate >= 70 ? 'cell-warn' : 'cell-bad';
+      const colorClass = rate == null ? '' : rate >= 80 ? 'cell-good' : rate >= 50 ? 'cell-warn' : 'cell-bad';
       html += `<td class="${colorClass}">${display}</td>`;
     }
 
