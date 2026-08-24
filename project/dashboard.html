@@ -21,7 +21,7 @@
 
     <main class="main">
 
-      <section class="card">
+      <section class="card monthly-only">
         <div class="month-selector">
           <button class="btn btn-icon" id="btn-prev-month">◀</button>
           <h2 class="month-title" id="month-title">2026年 1月</h2>
@@ -34,7 +34,7 @@
         <button id="viewYearBtn" class="toggle-btn">年間比較</button>
       </div>
 
-      <section class="kpi-grid">
+      <section class="kpi-grid monthly-only">
         <div class="kpi-card">
           <div class="kpi-label">工場平均稼働率</div>
           <div class="kpi-value" id="kpi-avg">--%</div>
@@ -54,7 +54,7 @@
         </div>
       </section>
 
-      <section class="card">
+      <section class="card monthly-only">
         <h2 class="card-title">工程別　稼働状況マップ</h2>
         <div id="process-map"></div>
         <div class="legend">
@@ -65,25 +65,25 @@
         </div>
       </section>
 
-      <section class="card">
+      <section class="card monthly-only">
         <h2 class="card-title">OEEランキング（本当の生産性）</h2>
         <p class="card-desc">稼働率 × 性能率 × 良品率。稼働率が高くても生産性が低い機械がわかる。</p>
         <div id="oee-ranking"></div>
       </section>
 
-      <section class="card">
+      <section class="card monthly-only">
         <h2 class="card-title">稼働率ランキング</h2>
         <div id="rate-ranking"></div>
       </section>
 
-      <section class="card">
+      <section class="card monthly-only">
         <h2 class="card-title">工場平均稼働率　月別推移</h2>
         <div class="chart-wrap">
           <canvas id="trend-chart"></canvas>
         </div>
       </section>
 
-      <section class="card">
+      <section class="card monthly-only">
         <h2 class="card-title">機械別　詳細データ</h2>
         <div class="table-wrap">
           <table class="data-table" id="detail-table">
@@ -103,7 +103,7 @@
         </div>
       </section>
 
-      <section class="card">
+      <section class="card monthly-only">
         <h2 class="card-title">製品別　生産実績</h2>
         <div class="table-wrap">
           <table class="data-table" id="product-table">
@@ -121,7 +121,7 @@
         </div>
       </section>
 
-      <section class="card">
+      <section class="card monthly-only">
         <h2 class="card-title">⚠️ トラブル停止時間ランキング</h2>
         <div id="trouble-ranking"></div>
       </section>
