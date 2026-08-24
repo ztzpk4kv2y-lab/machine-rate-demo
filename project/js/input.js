@@ -117,7 +117,8 @@ document.getElementById('btn-new-lot').addEventListener('click', () => {
   PRODUCTS.forEach(p => {
     const opt = document.createElement('option');
     opt.value = p.id;
-    opt.textContent = `${p.name}（${p.shotCount.toLocaleString()}shot/h）`;
+   opt.textContent = `${p.name}（${(p.shotCount ?? 0).toLocaleString()}shot/h）`;
+
     select.appendChild(opt);
   });
   document.getElementById('selected-info-label').textContent =
