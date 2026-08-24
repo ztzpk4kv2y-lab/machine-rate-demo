@@ -5,6 +5,8 @@ let selectedLotId = null;
 let isNewLot = false;
 let lunchBreak = -1;
 let eveningBreak = -1;
+let lastUsedDate = null;
+
 
 document.addEventListener('DOMContentLoaded', () => {
   initOnlineStatus();
@@ -208,6 +210,7 @@ document.getElementById('input-form').addEventListener('submit', (e) => {
   btn.textContent = '保存中...';
 
   const date = document.getElementById('input-date').value;
+    lastUsedDate = date;
   const startTime = document.getElementById('input-start').value;
   const endTime = document.getElementById('input-end').value;
   const breakTime = parseInt(document.getElementById('break-hidden').value);
@@ -287,6 +290,24 @@ function showErrorPopup(message) {
 }
 
 // 続けて入力
+document.getElementById('btn-continue-lot').addEventListener('click', () => {
+  selectedLotId = null;
+  isNewLot = false;
+  lunchBreak = -1;
+  eveningBreak = -1;
+  document.getElementById('input-form').reset();
+  document.getElementById('break-hidden').value = -1;
+  document.getElementById('break-total-display').textContent = '-- 選択してください';
+  document.querySelectorAll('.break-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('break-box').classList.remove('break-error');
+  document.getElementById('input-date').value = lastUsedDate;
+  const machine = MACHINES.find(m => m.id === selectedMachineId);
+  document.getElementById('selected-machine-label').textContent =
+    `選択中：${machine.process} - ${machine.name}`;
+  renderActiveLots(selectedMachineId);
+  showStep('step2');
+});
+
 document.getElementById('btn-back').addEventListener('click', () => {
   selectedMachineId = null;
   selectedLotId = null;
