@@ -1,153 +1,292 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>稼働率ダッシュボード</title>
-  <link rel="stylesheet" href="css/style.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-</head>
-<body>
-  <div id="app">
-    <!-- ヘッダー -->
-    <header class="header">
-      <div class="header-inner">
-        <h1 class="header-title">🏭 稼働率ダッシュボード</h1>
-        <nav class="header-nav">
-          <a href="index.html" class="nav-link">入力画面</a>
-          <a href="master.html" class="nav-link">マスタ管理</a>
-        </nav>
-      </div>
-    </header>
+// dashboard.js
 
-    <main class="main">
-      <!-- 月選択 -->
-      <section class="card">
-        <div class="month-selector">
-          <button class="btn btn-icon" id="btn-prev-month">◀</button>
-          <h2 class="month-title" id="month-title">2026年 1月</h2>
-          <button class="btn btn-icon" id="btn-next-month">▶</button>
-        </div>
-      </section>
-<div class="view-toggle">
-  <button id="viewMonthBtn" class="toggle-btn active">月別表示</button>
-  <button id="viewYearBtn" class="toggle-btn">年間比較</button>
-</div>
+let currentMonth = { year: 2026, month: 1 };
+let currentYear = 2026;
 
-<div id="yearlyView" style="display:none;">
-  <div class="month-nav">
-    <button id="prevYear">◀</button>
-    <span id="currentYear"></span>
-    <button id="nextYear">▶</button>
-  </div>
-  <div class="table-scroll">
-    <div id="yearlyTable"></div>
-  </div>
-</div>
+window.addEventListener('load', () => {
+  renderDashboard();
 
-     <!-- KPIカード -->
-      <section class="kpi-grid">
-        <div class="kpi-card">
-          <div class="kpi-label">工場平均稼働率</div>
-          <div class="kpi-value" id="kpi-avg">--%</div>
-        </div>
-        <div class="kpi-card kpi-green">
-          <div class="kpi-label">最高稼働率</div>
-          <div class="kpi-value" id="kpi-max">--%</div>
-          <div class="kpi-sub" id="kpi-max-name">--</div>
-        </div>
-        <div class="kpi-card kpi-red">
-          <div class="kpi-label">要確認設備（50%未満）</div>
-          <div class="kpi-value" id="kpi-low">--台</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-label">稼働あり設備</div>
-          <div class="kpi-value" id="kpi-active">--台</div>
-        </div>
-      </section>
+  document.getElementById('btn-prev-month')?.addEventListener('click', () => {
+    currentMonth.month--;
+    if (currentMonth.month < 1) { currentMonth.month = 12; currentMonth.year--; }
+    renderDashboard();
+  });
 
-      <!-- 工程別稼働マップ -->
-      <section class="card">
-        <h2 class="card-title">工程別　稼働状況マップ</h2>
-        <div id="process-map"></div>
-        <div class="legend">
-          <span class="legend-item legend-green">🟢 80%以上</span>
-          <span class="legend-item legend-yellow">🟡 50〜79%</span>
-          <span class="legend-item legend-red">🔴 50%未満</span>
-          <span class="legend-item legend-gray">⬜ データなし</span>
-        </div>
-      </section>
+  document.getElementById('btn-next-month')?.addEventListener('click', () => {
+    currentMonth.month++;
+    if (currentMonth.month > 12) { currentMonth.month = 1; currentMonth.year++; }
+    renderDashboard();
+  });
 
-      <!-- OEEランキング -->
-      <section class="card">
-        <h2 class="card-title">OEEランキング（本当の生産性）</h2>
-        <p class="card-desc">稼働率 × 性能率 × 良品率。稼働率が高くても生産性が低い機械がわかる。</p>
-        <div id="oee-ranking"></div>
-      </section>
+  document.getElementById('viewMonthBtn')?.addEventListener('click', () => switchView('month'));
+  document.getElementById('viewYearBtn')?.addEventListener('click', () => switchView('year'));
 
-      <!-- 稼働率ランキング -->
-      <section class="card">
-        <h2 class="card-title">稼働率ランキング</h2>
-        <div id="rate-ranking"></div>
-      </section>
+  document.getElementById('prevYear')?.addEventListener('click', () => {
+    currentYear--;
+    renderYearlyView();
+  });
 
-      <!-- 月別推移グラフ -->
-      <section class="card">
-        <h2 class="card-title">工場平均稼働率　月別推移</h2>
-        <div class="chart-wrap">
-          <canvas id="trend-chart"></canvas>
-        </div>
-      </section>
+  document.getElementById('nextYear')?.addEventListener('click', () => {
+    currentYear++;
+    renderYearlyView();
+  });
+});
 
-      <!-- 機械別詳細テーブル -->
-      <section class="card">
-        <h2 class="card-title">機械別　詳細データ</h2>
-        <div class="table-wrap">
-          <table class="data-table" id="detail-table">
-            <thead>
-              <tr>
-                <th>工程</th>
-                <th>機械名</th>
-                <th>稼働率</th>
-                <th>OEE</th>
-                <th>良品率</th>
-                <th>トラブル停止</th>
-                <th>状態</th>
-              </tr>
-            </thead>
-            <tbody id="detail-tbody"></tbody>
-          </table>
-        </div>
-      </section>
+function switchView(view) {
+  const monthBtn = document.getElementById('viewMonthBtn');
+  const yearBtn = document.getElementById('viewYearBtn');
+  const yearlyView = document.getElementById('yearlyView');
+  const monthlyCards = document.querySelectorAll('.kpi-grid, .card');
 
-      <!-- 製品別生産実績 -->
-      <section class="card">
-        <h2 class="card-title">製品別　生産実績</h2>
-        <div class="table-wrap">
-          <table class="data-table" id="product-table">
-            <thead>
-              <tr>
-                <th>製品名</th>
-                <th>ロット数</th>
-                <th>総生産数</th>
-                <th>良品数</th>
-                <th>良品率</th>
-              </tr>
-            </thead>
-            <tbody id="product-tbody"></tbody>
-          </table>
-        </div>
-      </section>
+  if (view === 'month') {
+    monthBtn?.classList.add('active');
+    yearBtn?.classList.remove('active');
+    if (yearlyView) yearlyView.style.display = 'none';
+    monthlyCards.forEach(el => el.style.display = '');
+  } else {
+    monthBtn?.classList.remove('active');
+    yearBtn?.classList.add('active');
+    if (yearlyView) yearlyView.style.display = 'block';
+    monthlyCards.forEach(el => el.style.display = 'none');
+    renderYearlyView();
+  }
+}
 
-      <!-- トラブル停止ランキング -->
-      <section class="card">
-        <h2 class="card-title">⚠️ トラブル停止時間ランキング</h2>
-        <div id="trouble-ranking"></div>
-      </section>
-    </main>
-  </div>
+function renderDashboard() {
+  const titleEl = document.getElementById('month-title');
+  if (titleEl) titleEl.textContent = `${currentMonth.year}年 ${currentMonth.month}月`;
 
-  <script src="js/data.js"></script>
-  <script src="js/dashboard.js"></script>
-</body>
-</html>
+  renderKPI();
+  renderProcessMap();
+  renderOEERanking();
+  renderRateRanking();
+  renderTrendChart();
+  renderDetailTable();
+  renderProductTable();
+  renderTroubleRanking();
+}
+
+function renderKPI() {
+  const stats = MACHINES.map(m => ({
+    machine: m,
+    stat: getMachineMonthStats(m.id, currentMonth.year, currentMonth.month)
+  })).filter(x => x.stat !== null);
+
+  const rates = stats.map(x => x.stat.machineRate * 100);
+  const avg = rates.length ? (rates.reduce((a, b) => a + b, 0) / rates.length) : 0;
+
+  let maxRate = 0, maxName = '--';
+  stats.forEach(x => {
+    const r = x.stat.machineRate * 100;
+    if (r > maxRate) { maxRate = r; maxName = x.machine.name; }
+  });
+
+  const low = rates.filter(r => r < 50).length;
+  const active = stats.filter(x => x.stat.operatingDays > 0).length;
+
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  set('kpi-avg', avg.toFixed(1) + '%');
+  set('kpi-max', maxRate.toFixed(1) + '%');
+  set('kpi-max-name', maxName);
+  set('kpi-low', low + '台');
+  set('kpi-active', active + '台');
+}
+
+function renderProcessMap() {
+  const container = document.getElementById('process-map');
+  if (!container) return;
+
+  const processes = [...new Set(MACHINES.map(m => m.process))];
+  container.innerHTML = processes.map(proc => {
+    const machines = MACHINES.filter(m => m.process === proc);
+    const chips = machines.map(m => {
+      const stat = getMachineMonthStats(m.id, currentMonth.year, currentMonth.month);
+      if (!stat) {
+        return `<a href="machine.html?id=${m.id}" style="display:inline-block;margin:4px;padding:8px 12px;border-radius:8px;background:#e5e7eb;color:#374151;text-decoration:none;">${m.name}<br>データなし</a>`;
+      }
+      const rate = stat.machineRate * 100;
+      const bg = rate >= 80 ? '#dcfce7' : rate >= 50 ? '#fef9c3' : '#fee2e2';
+      const color = rate >= 80 ? '#166534' : rate >= 50 ? '#854d0e' : '#991b1b';
+      return `<a href="machine.html?id=${m.id}" style="display:inline-block;margin:4px;padding:8px 12px;border-radius:8px;background:${bg};color:${color};text-decoration:none;font-weight:bold;">${m.name}<br>${rate.toFixed(1)}%</a>`;
+    }).join('');
+    return `<div style="margin-bottom:16px;"><div style="font-weight:bold;margin-bottom:6px;">${proc}</div><div>${chips}</div></div>`;
+  }).join('');
+}
+
+function renderOEERanking() {
+  const container = document.getElementById('oee-ranking');
+  if (!container) return;
+
+  const stats = MACHINES.map(m => {
+    const s = getMachineMonthStats(m.id, currentMonth.year, currentMonth.month);
+    return { name: m.name, id: m.id, oee: s ? s.oee * 100 : 0, hasData: !!s };
+  }).sort((a, b) => b.oee - a.oee);
+
+  container.innerHTML = stats.map((s, i) => `
+    <a href="machine.html?id=${s.id}" style="display:flex;justify-content:space-between;padding:8px 12px;border-bottom:1px solid #e5e7eb;text-decoration:none;color:#111827;">
+      <span>${i + 1}. ${s.name}</span>
+      <span style="font-weight:bold;">${s.hasData ? s.oee.toFixed(1) + '%' : 'データなし'}</span>
+    </a>
+  `).join('');
+}
+
+function renderRateRanking() {
+  const container = document.getElementById('rate-ranking');
+  if (!container) return;
+
+  const stats = MACHINES.map(m => {
+    const s = getMachineMonthStats(m.id, currentMonth.year, currentMonth.month);
+    return { name: m.name, id: m.id, rate: s ? s.machineRate * 100 : 0, hasData: !!s };
+  }).sort((a, b) => b.rate - a.rate);
+
+  container.innerHTML = stats.map((s, i) => `
+    <a href="machine.html?id=${s.id}" style="display:flex;justify-content:space-between;padding:8px 12px;border-bottom:1px solid #e5e7eb;text-decoration:none;color:#111827;">
+      <span>${i + 1}. ${s.name}</span>
+      <span style="font-weight:bold;">${s.hasData ? s.rate.toFixed(1) + '%' : 'データなし'}</span>
+    </a>
+  `).join('');
+}
+
+let trendChartInstance = null;
+
+function renderTrendChart() {
+  const canvas = document.getElementById('trend-chart');
+  if (!canvas || typeof Chart === 'undefined') return;
+
+  const labels = [];
+  const data = [];
+  for (let m = 1; m <= 6; m++) {
+    const monthStats = MACHINES.map(mc => getMachineMonthStats(mc.id, currentMonth.year, m)).filter(s => s !== null);
+    const rates = monthStats.map(s => s.machineRate * 100);
+    const avg = rates.length ? (rates.reduce((a, b) => a + b, 0) / rates.length) : null;
+    labels.push(`${m}月`);
+    data.push(avg !== null ? avg.toFixed(1) : null);
+  }
+
+  if (trendChartInstance) trendChartInstance.destroy();
+  trendChartInstance = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: '工場平均稼働率(%)',
+        data: data,
+        borderColor: '#3b82f6',
+        backgroundColor: 'rgba(59,130,246,0.15)',
+        tension: 0.3,
+        fill: true
+      }]
+    },
+    options: {
+      scales: { y: { min: 0, max: 120 } }
+    }
+  });
+}
+
+function renderDetailTable() {
+  const tbody = document.getElementById('detail-tbody');
+  if (!tbody) return;
+
+  tbody.innerHTML = MACHINES.map(m => {
+    const s = getMachineMonthStats(m.id, currentMonth.year, currentMonth.month);
+    if (!s) {
+      return `<tr><td>${m.process}</td><td>${m.name}</td><td>-</td><td>-</td><td>-</td><td>-</td><td>データなし</td></tr>`;
+    }
+    const rate = (s.machineRate * 100).toFixed(1);
+    const oee = (s.oee * 100).toFixed(1);
+    const quality = (s.qualityRate * 100).toFixed(1);
+    const status = s.machineRate * 100 >= 80 ? '良好' : s.machineRate * 100 >= 50 ? '注意' : '要確認';
+    return `<tr>
+      <td>${m.process}</td>
+      <td><a href="machine.html?id=${m.id}">${m.name}</a></td>
+      <td>${rate}%</td>
+      <td>${oee}%</td>
+      <td>${quality}%</td>
+      <td>${s.totalTroubleMin}分</td>
+      <td>${status}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderProductTable() {
+  const tbody = document.getElementById('product-tbody');
+  if (!tbody) return;
+
+  const monthStr = `${currentMonth.year}-${String(currentMonth.month).padStart(2, '0')}`;
+
+  tbody.innerHTML = PRODUCTS.map(p => {
+    const recs = RECORDS.filter(r => r.productId === p.id && r.date.startsWith(monthStr));
+    if (recs.length === 0) {
+      return `<tr><td>${p.name}</td><td>0</td><td>-</td><td>-</td><td>-</td></tr>`;
+    }
+    const lots = new Set(recs.map(r => r.lotId)).size;
+    const totalGood = recs.reduce((s, r) => s + r.goodProduction, 0);
+    const totalRaw = recs.reduce((s, r) => s + Math.round(r.goodProduction / r.qualityRate), 0);
+    const qualityRate = totalRaw > 0 ? (totalGood / totalRaw * 100).toFixed(1) : '-';
+
+    return `<tr>
+      <td>${p.name}</td>
+      <td>${lots}</td>
+      <td>${totalRaw.toLocaleString()}</td>
+      <td>${totalGood.toLocaleString()}</td>
+      <td>${qualityRate}%</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderTroubleRanking() {
+  const container = document.getElementById('trouble-ranking');
+  if (!container) return;
+
+  const monthStr = `${currentMonth.year}-${String(currentMonth.month).padStart(2, '0')}`;
+
+  const stats = MACHINES.map(m => {
+    const total = RECORDS.filter(r => r.machineId === m.id && r.date.startsWith(monthStr))
+      .reduce((s, r) => s + r.troubleTime, 0);
+    return { name: m.name, id: m.id, total };
+  }).filter(s => s.total > 0).sort((a, b) => b.total - a.total);
+
+  if (stats.length === 0) {
+    container.innerHTML = '<p style="color:#6b7280;">この月はトラブル停止の記録がありません。</p>';
+    return;
+  }
+
+  container.innerHTML = stats.map((s, i) => `
+    <a href="machine.html?id=${s.id}" style="display:flex;justify-content:space-between;padding:8px 12px;border-bottom:1px solid #e5e7eb;text-decoration:none;color:#111827;">
+      <span>${i + 1}. ${s.name}</span>
+      <span style="font-weight:bold;color:#dc2626;">${s.total}分</span>
+    </a>
+  `).join('');
+}
+
+function renderYearlyView() {
+  const yearEl = document.getElementById('currentYear');
+  if (yearEl) yearEl.textContent = `${currentYear}年`;
+
+  const container = document.getElementById('yearlyTable');
+  if (!container) return;
+
+  let html = '<table class="data-table"><thead><tr><th>機械名</th>';
+  for (let m = 1; m <= 12; m++) html += `<th>${m}月</th>`;
+  html += '<th>年平均</th></tr></thead><tbody>';
+
+  MACHINES.forEach(machine => {
+    let sum = 0, count = 0;
+    html += `<tr><td><a href="machine.html?id=${machine.id}">${machine.name}</a></td>`;
+
+    for (let m = 1; m <= 12; m++) {
+      const stats = getMachineMonthStats(machine.id, currentYear, m);
+      const rate = stats ? stats.machineRate * 100 : null;
+      if (rate != null) { sum += rate; count++; }
+      const display = rate != null ? rate.toFixed(1) + '%' : '-';
+      const bg = rate == null ? '' : rate >= 80 ? 'background:#dcfce7;' : rate >= 50 ? 'background:#fef9c3;' : 'background:#fee2e2;';
+      html += `<td style="${bg}">${display}</td>`;
+    }
+
+    const yearAvg = count ? (sum / count).toFixed(1) + '%' : '-';
+    html += `<td style="font-weight:bold;background:#f1f5f9;">${yearAvg}</td></tr>`;
+  });
+
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
