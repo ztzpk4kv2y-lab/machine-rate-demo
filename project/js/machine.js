@@ -48,6 +48,12 @@ function formatMin(min) {
   return `${h}:${String(m).padStart(2, '0')}`;
 }
 
+function timeToMinutes(timeStr) {
+  if (!timeStr) return 0;
+  const [h, m] = timeStr.split(':').map(Number);
+  return h * 60 + m;
+}
+
 function getMonthRecords(year, month) {
   const monthStr = `${year}-${String(month).padStart(2, '0')}`;
   return RECORDS.filter(r => r.date.startsWith(monthStr));
@@ -162,21 +168,45 @@ function renderDailyTable() {
   const tbody = document.getElementById('daily-tbody');
   const records = getMonthRecords(currentYear, currentMonth)
     .filter(r => r.machineId === machineId)
-    .sort((a, b) => a.date.localeCompare(b.date));
+    .sort((a, b) => {
+      if (a.date !== b.date) return a.date.localeCompare(b.date);
+      return timeToMinutes(a.startTime) - timeToMinutes(b.startTime);
+    });
 
   if (records.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:#9ca3af;">データがありません</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#9ca3af;">データがありません</td></tr>';
     return;
   }
 
   tbody.innerHTML = '';
-  records.forEach(r => {
+  records.forEach((r, index) => {
     const lot = LOTS.find(l => l.id === r.lotId);
     const product = PRODUCTS.find(p => p.id === lot?.productId);
-    const actualProduction = Math.round(r.goodProduction / r.qualityRate);
+    const actualProduction = r.goodProduction > 0 && r.qualityRate > 0
+      ? Math.round(r.goodProduction / r.qualityRate)
+      : 0;
 
     const dateObj = new Date(r.date);
     const dateLabel = `${dateObj.getMonth() + 1}/${dateObj.getDate()}`;
+
+    // クリアランス時間の計算
+    let clearanceCell = '<td style="color:#9ca3af;">-</td>';
+    if (index > 0) {
+      const prev = records[index - 1];
+      if (prev.date === r.date) {
+        const prevEndMin = timeToMinutes(prev.endTime);
+        const currStartMin = timeToMinutes(r.startTime);
+        const clMin = currStartMin - prevEndMin;
+        if (clMin > 0) {
+          const clColor = clMin <= 30 ? '#16a34a' : clMin <= 60 ? '#d97706' : '#dc2626';
+          clearanceCell = `<td style="color:${clColor};font-weight:700;">${clMin}分</td>`;
+        } else if (clMin === 0) {
+          clearanceCell = '<td style="color:#9ca3af;">0分</td>';
+        } else {
+          clearanceCell = '<td style="color:#9ca3af;">重複</td>';
+        }
+      }
+    }
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
@@ -185,6 +215,7 @@ function renderDailyTable() {
       <td style="font-size:12px">${product?.name || '--'}</td>
       <td>${r.startTime}</td>
       <td>${r.endTime}</td>
+      ${clearanceCell}
       <td>${formatMin(r.breakTime)}</td>
       <td>${r.troubleTime > 0 ? `<span style="color:#dc2626;font-weight:700">${r.troubleTime}分</span>` : '-'}</td>
       <td>${Math.floor(r.actualWorkingTime / 60)}h${r.actualWorkingTime % 60}m</td>
