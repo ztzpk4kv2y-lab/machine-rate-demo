@@ -36,21 +36,22 @@ function switchView(view) {
   const monthBtn = document.getElementById('viewMonthBtn');
   const yearBtn = document.getElementById('viewYearBtn');
   const yearlyView = document.getElementById('yearlyView');
-  const monthlyCards = document.querySelectorAll('.kpi-grid, .card');
+  const monthlyOnly = document.querySelectorAll('.monthly-only');
 
   if (view === 'month') {
     monthBtn?.classList.add('active');
     yearBtn?.classList.remove('active');
     if (yearlyView) yearlyView.style.display = 'none';
-    monthlyCards.forEach(el => el.style.display = '');
+    monthlyOnly.forEach(el => el.style.display = '');
   } else {
     monthBtn?.classList.remove('active');
     yearBtn?.classList.add('active');
     if (yearlyView) yearlyView.style.display = 'block';
-    monthlyCards.forEach(el => el.style.display = 'none');
+    monthlyOnly.forEach(el => el.style.display = 'none');
     renderYearlyView();
   }
 }
+
 
 function renderDashboard() {
   const titleEl = document.getElementById('month-title');
