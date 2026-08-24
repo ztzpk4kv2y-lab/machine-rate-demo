@@ -2,6 +2,7 @@
 
 let currentMonth = { year: 2026, month: 1 };
 let currentYear = 2026;
+let currentMetric = 'rate';
 
 window.addEventListener('load', () => {
   renderDashboard();
@@ -20,6 +21,8 @@ window.addEventListener('load', () => {
 
   document.getElementById('viewMonthBtn')?.addEventListener('click', () => switchView('month'));
   document.getElementById('viewYearBtn')?.addEventListener('click', () => switchView('year'));
+  document.getElementById('metricRateBtn')?.addEventListener('click', () => switchMetric('rate'));
+  document.getElementById('metricOeeBtn')?.addEventListener('click', () => switchMetric('oee'));
 
   document.getElementById('prevYear')?.addEventListener('click', () => {
     currentYear--;
@@ -52,6 +55,23 @@ function switchView(view) {
   }
 }
 
+function switchMetric(metric) {
+  currentMetric = metric;
+  const rateBtn = document.getElementById('metricRateBtn');
+  const oeeBtn = document.getElementById('metricOeeBtn');
+  const title = document.getElementById('yearlyTableTitle');
+
+  if (metric === 'rate') {
+    rateBtn?.classList.add('active');
+    oeeBtn?.classList.remove('active');
+    if (title) title.textContent = '年間　稼働率比較';
+  } else {
+    rateBtn?.classList.remove('active');
+    oeeBtn?.classList.add('active');
+    if (title) title.textContent = '年間　OEE比較';
+  }
+  renderYearlyView();
+}
 
 function renderDashboard() {
   const titleEl = document.getElementById('month-title');
@@ -277,10 +297,10 @@ function renderYearlyView() {
 
     for (let m = 1; m <= 12; m++) {
       const stats = getMachineMonthStats(machine.id, currentYear, m);
-      const rate = stats ? stats.machineRate * 100 : null;
-      if (rate != null) { sum += rate; count++; }
-      const display = rate != null ? rate.toFixed(1) + '%' : '-';
-      const bg = rate == null ? '' : rate >= 80 ? 'background:#dcfce7;' : rate >= 50 ? 'background:#fef9c3;' : 'background:#fee2e2;';
+      const value = stats ? (currentMetric === 'rate' ? stats.machineRate : stats.oee) * 100 : null;
+      if (value != null) { sum += value; count++; }
+      const display = value != null ? value.toFixed(1) + '%' : '-';
+      const bg = value == null ? '' : value >= 80 ? 'background:#dcfce7;' : value >= 50 ? 'background:#fef9c3;' : 'background:#fee2e2;';
       html += `<td style="${bg}">${display}</td>`;
     }
 
