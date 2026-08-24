@@ -125,7 +125,6 @@
         <h2 class="card-title">⚠️ トラブル停止時間ランキング</h2>
         <div id="trouble-ranking"></div>
       </section>
-
      <div id="yearlyView" style="display:none;">
   <section class="card">
     <div class="month-selector">
@@ -140,6 +139,12 @@
   </div>
   <section class="card">
     <h2 class="card-title" id="yearlyTableTitle">年間　稼働率比較</h2>
+    <div class="legend">
+      <span class="legend-item legend-green">🟢 80%以上</span>
+      <span class="legend-item legend-yellow">🟡 50〜79%</span>
+      <span class="legend-item legend-red">🔴 50%未満</span>
+      <span class="legend-item legend-gray">⬜ データなし</span>
+    </div>
     <div class="table-wrap">
       <div id="yearlyTable"></div>
     </div>
@@ -147,6 +152,7 @@
 </div>
 
         </section>
+
       </div>
 
     </main>
