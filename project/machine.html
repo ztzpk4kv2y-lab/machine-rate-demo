@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>機械詳細</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div id="app">
+    <header class="header">
+      <div class="header-inner">
+        <button class="btn-back-header" onclick="history.back()">◀ 戻る</button>
+        <h1 class="header-title" id="machine-title">機械詳細</h1>
+        <div></div>
+      </div>
+    </header>
+
+    <main class="main">
+      <!-- 機械情報 -->
+      <section class="card">
+        <div class="machine-info-header">
+          <div>
+            <div class="machine-info-process" id="detail-process"></div>
+            <div class="machine-info-name" id="detail-name"></div>
+          </div>
+          <div class="machine-info-break" id="detail-break"></div>
+        </div>
+      </section>
+
+      <!-- 月選択 -->
+      <section class="card">
+        <div class="month-selector">
+          <button class="btn btn-icon" id="btn-prev-month">◀</button>
+          <h2 class="month-title" id="month-title">2026年 1月</h2>
+          <button class="btn btn-icon" id="btn-next-month">▶</button>
+        </div>
+      </section>
+
+      <!-- 月別サマリー -->
+      <section class="card">
+        <h2 class="card-title">📊 月別サマリー</h2>
+        <p class="card-desc">選択した月のこの機械の稼働状況をまとめて表示しています。稼働率・OEE・完了ロット数・生産実績を一目で確認できます。</p>
+        <div class="summary-grid" id="summary-grid"></div>
+      </section>
+
+      <!-- 月別推移グラフ -->
+      <section class="card">
+        <h2 class="card-title">📈 稼働率　月別推移</h2>
+        <p class="card-desc">この機械の稼働率が月ごとにどう変化しているかを示しています。下がっている月は原因を確認しましょう。</p>
+        <div class="chart-wrap">
+          <canvas id="machine-trend-chart"></canvas>
+        </div>
+      </section>
+
+      <!-- 日次データ一覧 -->
+      <section class="card">
+        <h2 class="card-title">📋 日次データ一覧</h2>
+        <p class="card-desc">選択した月の1日ごとの稼働データです。開始・終了時間、トラブル停止時間、実稼働時間、稼働率を確認できます。</p>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>日付</th>
+                <th>ロット番号</th>
+                <th>製品</th>
+                <th>開始</th>
+                <th>終了</th>
+                <th>休憩</th>
+                <th>トラブル</th>
+                <th>実稼働</th>
+                <th>稼働率</th>
+                <th>実生産</th>
+                <th>良品率</th>
+              </tr>
+            </thead>
+            <tbody id="daily-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- トラブル履歴 -->
+      <section class="card">
+        <h2 class="card-title">⚠️ トラブル履歴</h2>
+        <p class="card-desc">トラブルによる停止が発生した日の一覧です。停止時間が長い日や頻発している時期を確認し、予防保全に役立てましょう。</p>
+        <div id="trouble-history"></div>
+      </section>
+    </main>
+  </div>
+
+  <script src="js/data.js"></script>
+  <script src="js/machine.js"></script>
+</body>
+</html>

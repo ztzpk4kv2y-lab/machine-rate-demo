@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>稼働率入力</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app">
+    <header class="header">
+      <div class="header-inner">
+        <h1 class="header-title">🏭 稼働率入力</h1>
+        <div class="header-status">
+          <span id="online-status" class="status-badge online">● オンライン</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="main">
+      <!-- STEP1: 機械選択 -->
+      <section class="card" id="step1">
+        <h2 class="card-title">STEP 1　機械を選ぶ</h2>
+        <div class="machine-grid" id="machine-grid"></div>
+      </section>
+
+      <!-- STEP2: ロット選択 -->
+      <section class="card hidden" id="step2">
+        <h2 class="card-title">STEP 2　ロットを選ぶ</h2>
+        <div class="selected-machine" id="selected-machine-label"></div>
+        <div class="lot-options">
+          <button class="btn btn-primary" id="btn-new-lot">＋ 新規ロット作成</button>
+          <div id="active-lots"></div>
+        </div>
+      </section>
+
+      <!-- STEP3: 入力フォーム -->
+      <section class="card hidden" id="step3">
+        <h2 class="card-title">STEP 3　稼働データを入力</h2>
+        <div class="selected-info" id="selected-info-label"></div>
+
+        <form id="input-form">
+          <input type="hidden" id="break-hidden" value="-1">
+
+          <!-- 日付 -->
+          <div class="form-group">
+            <label class="form-label">日付</label>
+            <input type="date" id="input-date" class="form-input" required>
+          </div>
+
+          <!-- 製品（新規ロットのみ） -->
+          <div class="form-group hidden" id="product-group">
+            <label class="form-label">製造品目</label>
+            <select id="input-product" class="form-input">
+              <option value="">選択してください</option>
+            </select>
+          </div>
+
+          <!-- ロット番号（新規ロットのみ） -->
+          <div class="form-group hidden" id="lot-number-group">
+            <label class="form-label">ロット番号</label>
+            <input type="text" id="input-lot-number" class="form-input" placeholder="例：LOT-001">
+          </div>
+
+          <!-- 開始・終了時間 -->
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">開始時間</label>
+              <input type="time" id="input-start" class="form-input" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">終了時間</label>
+              <input type="time" id="input-end" class="form-input" required>
+            </div>
+          </div>
+
+          <!-- 休憩時間 -->
+          <div class="form-group">
+            <label class="form-label">休憩時間　<span class="required-badge">選択必須</span></label>
+            <div class="break-box" id="break-box">
+              <div class="break-row">
+                <span class="break-fixed-label">昼休憩</span>
+                <div class="break-toggle">
+                  <button type="button" class="break-btn" id="break-lunch-yes" data-type="lunch" data-val="60">あり 1:00</button>
+                  <button type="button" class="break-btn" id="break-lunch-no" data-type="lunch" data-val="0">なし</button>
+                </div>
+              </div>
+              <div class="break-row">
+                <span class="break-fixed-label">夕方休憩</span>
+                <div class="break-toggle">
+                  <button type="button" class="break-btn" id="break-evening-yes" data-type="evening" data-val="15">あり 0:15</button>
+                  <button type="button" class="break-btn" id="break-evening-no" data-type="evening" data-val="0">なし</button>
+                </div>
+              </div>
+              <div class="break-total">
+                合計休憩時間：<strong id="break-total-display">-- 選択してください</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- トラブル停止時間 -->
+          <div class="form-group">
+            <label class="form-label">トラブル停止時間（分）</label>
+            <input type="number" id="input-trouble" class="form-input" value="0" min="0" placeholder="0">
+          </div>
+
+          <!-- 残業時間 -->
+          <div class="form-group">
+            <label class="form-label">残業時間（分）</label>
+            <input type="number" id="input-overtime" class="form-input" value="0" min="0" placeholder="0">
+          </div>
+
+          <!-- 良品数 -->
+          <div class="form-group">
+            <label class="form-label">良品数</label>
+            <input type="number" id="input-good" class="form-input" min="0" placeholder="0">
+          </div>
+
+          <!-- 備考 -->
+          <div class="form-group">
+            <label class="form-label">備考</label>
+            <textarea id="input-note" class="form-input form-textarea" placeholder="トラブル内容・特記事項など"></textarea>
+          </div>
+
+          <!-- 稼働率プレビュー -->
+          <div class="preview-box">
+            <h3 class="preview-title">📊 入力プレビュー</h3>
+            <div class="preview-grid">
+              <div class="preview-item">
+                <span class="preview-label">実稼働時間</span>
+                <span class="preview-value" id="prev-working-time">--</span>
+              </div>
+              <div class="preview-item">
+                <span class="preview-label">機械稼働率</span>
+                <span class="preview-value" id="prev-machine-rate">--</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- ロット完了チェック -->
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="input-lot-complete">
+              このロットを完了にする
+            </label>
+          </div>
+
+          <!-- 送信ボタン -->
+          <button type="submit" class="btn btn-success btn-large" id="btn-submit">
+            入力を保存する
+          </button>
+        </form>
+      </section>
+
+      <!-- 完了メッセージ -->
+      <section class="card hidden" id="step-complete">
+        <div class="complete-box">
+          <div class="complete-icon">✅</div>
+          <h2 class="complete-title">今日もお疲れ様です！<br>入力完了しました 👍</h2>
+          <button class="btn btn-primary" id="btn-back">続けて入力する</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="js/data.js"></script>
+  <script src="js/input.js"></script>
+</body>
+</html>
+
