@@ -117,8 +117,7 @@ document.getElementById('btn-new-lot').addEventListener('click', () => {
   PRODUCTS.forEach(p => {
     const opt = document.createElement('option');
     opt.value = p.id;
-   opt.textContent = `${p.name}（${(p.shotCount ?? 0).toLocaleString()}shot/h）`;
-
+    opt.textContent = `${p.name}（${(p.shotCount ?? 0).toLocaleString()}shot/h）`;
     select.appendChild(opt);
   });
   document.getElementById('selected-info-label').textContent =
@@ -195,6 +194,12 @@ function updatePreview() {
   else rateEl.style.color = '#dc2626';
 }
 
+function timeToMinutes(timeStr) {
+  if (!timeStr) return 0;
+  const [h, m] = timeStr.split(':').map(Number);
+  return h * 60 + m;
+}
+
 // フォーム送信
 document.getElementById('input-form').addEventListener('submit', (e) => {
   e.preventDefault();
@@ -211,11 +216,12 @@ document.getElementById('input-form').addEventListener('submit', (e) => {
   btn.textContent = '保存中...';
 
   const date = document.getElementById('input-date').value;
-    lastUsedDate = date;
+  lastUsedDate = date;
   const startTime = document.getElementById('input-start').value;
   const endTime = document.getElementById('input-end').value;
   const breakTime = parseInt(document.getElementById('break-hidden').value);
   const troubleTime = parseInt(document.getElementById('input-trouble').value || 0);
+  const troubleReason = document.getElementById('input-trouble-reason').value.trim();
   const overtimeTime = parseInt(document.getElementById('input-overtime').value || 0);
   const goodProduction = parseInt(document.getElementById('input-good').value || 0);
   const note = document.getElementById('input-note').value.trim();
@@ -260,6 +266,7 @@ document.getElementById('input-form').addEventListener('submit', (e) => {
     endTime,
     breakTime,
     troubleTime,
+    troubleReason,
     overtimeTime,
     goodProduction,
     note,
@@ -290,8 +297,8 @@ function showErrorPopup(message) {
   document.body.appendChild(popup);
 }
 
-// 続けて入力
-document.getElementById('btn-continue-lot').addEventListener('click', () => {
+// 同じ機械で別ロットを入力
+document.getElementById('btn-continue-lot')?.addEventListener('click', () => {
   selectedLotId = null;
   isNewLot = false;
   lunchBreak = -1;
@@ -302,6 +309,7 @@ document.getElementById('btn-continue-lot').addEventListener('click', () => {
   document.querySelectorAll('.break-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('break-box').classList.remove('break-error');
   document.getElementById('input-date').value = lastUsedDate;
+  document.getElementById('input-trouble-reason').value = '';
   const machine = MACHINES.find(m => m.id === selectedMachineId);
   document.getElementById('selected-machine-label').textContent =
     `選択中：${machine.process} - ${machine.name}`;
@@ -309,6 +317,7 @@ document.getElementById('btn-continue-lot').addEventListener('click', () => {
   showStep('step2');
 });
 
+// 別の機械を選ぶ
 document.getElementById('btn-back').addEventListener('click', () => {
   selectedMachineId = null;
   selectedLotId = null;
@@ -320,6 +329,7 @@ document.getElementById('btn-back').addEventListener('click', () => {
   document.getElementById('break-total-display').textContent = '-- 選択してください';
   document.querySelectorAll('.break-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('break-box').classList.remove('break-error');
+  document.getElementById('input-trouble-reason').value = '';
   setTodayDate();
   document.querySelectorAll('.machine-btn').forEach(b => b.classList.remove('selected'));
   showStep('step1');
@@ -332,4 +342,3 @@ function showStep(stepId) {
   document.getElementById(stepId).classList.remove('hidden');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
-
