@@ -6,7 +6,6 @@ let machineId = null;
 let machineTrendChart = null;
 
 document.addEventListener('DOMContentLoaded', () => {
-  // URLパラメータから機械IDを取得
   const params = new URLSearchParams(window.location.search);
   machineId = params.get('id');
 
@@ -23,12 +22,10 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
-  // 機械情報表示
   document.getElementById('machine-title').textContent = machine.name;
   document.getElementById('detail-process').textContent = machine.process;
   document.getElementById('detail-name').textContent = machine.name;
-  document.getElementById('detail-break').textContent =
-    `休憩：${machine.breakTime === 60 ? '1:00' : '0:15'}`;
+  document.getElementById('detail-break').textContent = `休憩：${formatMin(machine.breakTime)}`;
 
   renderAll();
 
@@ -45,9 +42,19 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
+function formatMin(min) {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return `${h}:${String(m).padStart(2, '0')}`;
+}
+
+function getMonthRecords(year, month) {
+  const monthStr = `${year}-${String(month).padStart(2, '0')}`;
+  return RECORDS.filter(r => r.date.startsWith(monthStr));
+}
+
 function renderAll() {
-  document.getElementById('month-title').textContent =
-    `${currentYear}年 ${currentMonth}月`;
+  document.getElementById('month-title').textContent = `${currentYear}年 ${currentMonth}月`;
   renderSummary();
   renderTrendChart();
   renderDailyTable();
@@ -64,15 +71,17 @@ function renderSummary() {
     return;
   }
 
+  const totalMin = Math.round(stats.totalActualHours * 60);
+
   const items = [
-    { label: '全体稼働率', value: `${(stats.overallRate * 100).toFixed(1)}%`, desc: '月の稼働可能時間に対する実稼働時間の割合', color: getRateColor(stats.overallRate) },
     { label: '機械稼働率', value: `${(stats.machineRate * 100).toFixed(1)}%`, desc: '1日7.5hに対する実稼働時間の割合', color: getRateColor(stats.machineRate) },
-    { label: 'OEE', value: stats.oee !== null ? `${(stats.oee * 100).toFixed(1)}%` : '--', desc: '稼働率×性能率×良品率。本当の生産性を示す指標', color: stats.oee ? getRateColor(stats.oee) : '#9ca3af' },
-    { label: '完了ロット数', value: `${stats.completedLotCount}ロット`, desc: 'この月に完了したロットの数', color: '#2563eb' },
-    { label: '実稼働時間', value: `${Math.floor(stats.totalWorkingMin / 60)}h${stats.totalWorkingMin % 60}m`, desc: '休憩・トラブル停止を除いた実際の稼働時間', color: '#2563eb' },
+    { label: 'OEE', value: `${(stats.oee * 100).toFixed(1)}%`, desc: '稼働率×性能率×良品率。本当の生産性を示す指標', color: getRateColor(stats.oee) },
+    { label: '性能率', value: `${(stats.performanceRate * 100).toFixed(1)}%`, desc: '理論目標数に対する良品数の割合', color: getRateColor(stats.performanceRate) },
+    { label: '良品率', value: `${(stats.qualityRate * 100).toFixed(1)}%`, desc: '実生産数に対する良品数の割合', color: getRateColor(stats.qualityRate) },
+    { label: '完了ロット数', value: `${stats.completedLots}ロット`, desc: 'この月に完了したロットの数', color: '#2563eb' },
+    { label: '実稼働時間', value: `${Math.floor(totalMin / 60)}h${totalMin % 60}m`, desc: '休憩・トラブル停止を除いた実際の稼働時間', color: '#2563eb' },
     { label: 'トラブル停止', value: stats.totalTroubleMin > 0 ? `${stats.totalTroubleMin}分` : 'なし', desc: 'トラブルによる停止時間の合計', color: stats.totalTroubleMin > 0 ? '#dc2626' : '#16a34a' },
-    { label: '良品率', value: stats.goodRate !== null ? `${(stats.goodRate * 100).toFixed(1)}%` : '--', desc: '実生産数に対する良品数の割合', color: stats.goodRate ? getRateColor(stats.goodRate) : '#9ca3af' },
-    { label: '稼働日数', value: `${stats.recordCount}日`, desc: '実際に稼働した日数', color: '#2563eb' },
+    { label: '稼働日数', value: `${stats.operatingDays}日`, desc: '実際に稼働した日数', color: '#2563eb' },
   ];
 
   grid.innerHTML = '';
@@ -99,10 +108,12 @@ function renderTrendChart() {
   const labels = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
   const data = labels.map((_, i) => {
     const stats = getMachineMonthStats(machineId, currentYear, i + 1);
-    return stats ? parseFloat((stats.overallRate * 100).toFixed(1)) : null;
+    return stats ? parseFloat((stats.machineRate * 100).toFixed(1)) : null;
   });
 
-  const ctx = document.getElementById('machine-trend-chart').getContext('2d');
+  const canvas = document.getElementById('machine-trend-chart');
+  if (!canvas || typeof Chart === 'undefined') return;
+  const ctx = canvas.getContext('2d');
   if (machineTrendChart) machineTrendChart.destroy();
 
   machineTrendChart = new Chart(ctx, {
@@ -162,9 +173,7 @@ function renderDailyTable() {
   records.forEach(r => {
     const lot = LOTS.find(l => l.id === r.lotId);
     const product = PRODUCTS.find(p => p.id === lot?.productId);
-    const workingMin = calcWorkingTime(r);
-    const machineRate = calcMachineRate(workingMin);
-    const goodRate = r.actualProduction > 0 ? r.goodProduction / r.actualProduction : null;
+    const actualProduction = Math.round(r.goodProduction / r.qualityRate);
 
     const dateObj = new Date(r.date);
     const dateLabel = `${dateObj.getMonth() + 1}/${dateObj.getDate()}`;
@@ -176,12 +185,12 @@ function renderDailyTable() {
       <td style="font-size:12px">${product?.name || '--'}</td>
       <td>${r.startTime}</td>
       <td>${r.endTime}</td>
-      <td>${r.breakTime === 60 ? '1:00' : '0:15'}</td>
+      <td>${formatMin(r.breakTime)}</td>
       <td>${r.troubleTime > 0 ? `<span style="color:#dc2626;font-weight:700">${r.troubleTime}分</span>` : '-'}</td>
-      <td>${Math.floor(workingMin / 60)}h${workingMin % 60}m</td>
-      <td><span class="badge ${getRateBadgeClass(machineRate)}">${(machineRate * 100).toFixed(1)}%</span></td>
-      <td>${r.actualProduction > 0 ? r.actualProduction.toLocaleString() : '-'}</td>
-      <td>${goodRate !== null ? (goodRate * 100).toFixed(1) + '%' : '-'}</td>
+      <td>${Math.floor(r.actualWorkingTime / 60)}h${r.actualWorkingTime % 60}m</td>
+      <td><span class="badge ${getRateBadgeClass(r.machineRate)}">${(r.machineRate * 100).toFixed(1)}%</span></td>
+      <td>${actualProduction.toLocaleString()}</td>
+      <td>${(r.qualityRate * 100).toFixed(1)}%</td>
     `;
     tbody.appendChild(tr);
   });
