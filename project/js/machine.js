@@ -189,7 +189,6 @@ function renderDailyTable() {
     const dateObj = new Date(r.date);
     const dateLabel = `${dateObj.getMonth() + 1}/${dateObj.getDate()}`;
 
-    // クリアランス時間の計算
     let clearanceCell = '<td style="color:#9ca3af;">-</td>';
     if (index > 0) {
       const prev = records[index - 1];
@@ -215,13 +214,13 @@ function renderDailyTable() {
       <td style="font-size:12px">${product?.name || '--'}</td>
       <td>${r.startTime}</td>
       <td>${r.endTime}</td>
-      ${clearanceCell}
       <td>${formatMin(r.breakTime)}</td>
       <td>${r.troubleTime > 0 ? `<span style="color:#dc2626;font-weight:700">${r.troubleTime}分</span>` : '-'}</td>
       <td>${Math.floor(r.actualWorkingTime / 60)}h${r.actualWorkingTime % 60}m</td>
       <td><span class="badge ${getRateBadgeClass(r.machineRate)}">${(r.machineRate * 100).toFixed(1)}%</span></td>
       <td>${actualProduction.toLocaleString()}</td>
       <td>${(r.qualityRate * 100).toFixed(1)}%</td>
+      ${clearanceCell}
     `;
     tbody.appendChild(tr);
   });
@@ -267,7 +266,7 @@ function renderTroubleHistory() {
         <div class="rank-num" style="font-size:13px;width:36px">${dateLabel}</div>
         <div class="rank-name">
           ${lot?.lotNumber || '--'}
-          <div class="rank-sub">${r.startTime}〜${r.endTime}</div>
+          <div class="rank-sub">${r.startTime}〜${r.endTime}　${r.troubleReason ? '／ ' + r.troubleReason : ''}</div>
         </div>
         <div class="rank-bar-wrap">
           <div class="rank-bar-bg">
