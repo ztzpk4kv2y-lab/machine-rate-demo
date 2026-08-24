@@ -126,19 +126,26 @@
         <div id="trouble-ranking"></div>
       </section>
 
-      <div id="yearlyView" style="display:none;">
-        <section class="card">
-          <div class="month-selector">
-            <button class="btn btn-icon" id="prevYear">◀</button>
-            <h2 class="month-title" id="currentYear">2026年</h2>
-            <button class="btn btn-icon" id="nextYear">▶</button>
-          </div>
-        </section>
-        <section class="card">
-          <h2 class="card-title">年間　稼働率比較</h2>
-          <div class="table-wrap">
-            <div id="yearlyTable"></div>
-          </div>
+     <div id="yearlyView" style="display:none;">
+  <section class="card">
+    <div class="month-selector">
+      <button class="btn btn-icon" id="prevYear">◀</button>
+      <h2 class="month-title" id="currentYear">2026年</h2>
+      <button class="btn btn-icon" id="nextYear">▶</button>
+    </div>
+  </section>
+  <div class="view-toggle">
+    <button id="metricRateBtn" class="toggle-btn active">稼働率</button>
+    <button id="metricOeeBtn" class="toggle-btn">OEE</button>
+  </div>
+  <section class="card">
+    <h2 class="card-title" id="yearlyTableTitle">年間　稼働率比較</h2>
+    <div class="table-wrap">
+      <div id="yearlyTable"></div>
+    </div>
+  </section>
+</div>
+
         </section>
       </div>
 
