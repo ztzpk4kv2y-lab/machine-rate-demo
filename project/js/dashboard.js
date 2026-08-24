@@ -1,14 +1,22 @@
 // dashboard.js
 
-let currentMonth = null;
-let currentYear = null;
-let currentView = 'month';
+let currentMonth = { year: 2026, month: 1 };
+let currentYear = 2026;
 
 window.addEventListener('load', () => {
-  const now = new Date();
-  currentMonth = { year: now.getFullYear(), month: now.getMonth() + 1 };
-  currentYear = now.getFullYear();
   renderDashboard();
+
+  document.getElementById('btn-prev-month')?.addEventListener('click', () => {
+    currentMonth.month--;
+    if (currentMonth.month < 1) { currentMonth.month = 12; currentMonth.year--; }
+    renderDashboard();
+  });
+
+  document.getElementById('btn-next-month')?.addEventListener('click', () => {
+    currentMonth.month++;
+    if (currentMonth.month > 12) { currentMonth.month = 1; currentMonth.year++; }
+    renderDashboard();
+  });
 
   document.getElementById('viewMonthBtn')?.addEventListener('click', () => switchView('month'));
   document.getElementById('viewYearBtn')?.addEventListener('click', () => switchView('year'));
@@ -25,117 +33,228 @@ window.addEventListener('load', () => {
 });
 
 function switchView(view) {
-  currentView = view;
   const monthBtn = document.getElementById('viewMonthBtn');
   const yearBtn = document.getElementById('viewYearBtn');
   const yearlyView = document.getElementById('yearlyView');
-  const monthlyElements = document.querySelectorAll('.monthly-only');
+  const monthlyCards = document.querySelectorAll('.kpi-grid, .card');
 
   if (view === 'month') {
     monthBtn?.classList.add('active');
     yearBtn?.classList.remove('active');
     if (yearlyView) yearlyView.style.display = 'none';
-    monthlyElements.forEach(el => el.style.display = '');
+    monthlyCards.forEach(el => el.style.display = '');
   } else {
     monthBtn?.classList.remove('active');
     yearBtn?.classList.add('active');
     if (yearlyView) yearlyView.style.display = 'block';
-    monthlyElements.forEach(el => el.style.display = 'none');
+    monthlyCards.forEach(el => el.style.display = 'none');
     renderYearlyView();
   }
 }
 
 function renderDashboard() {
-  updateMonthDisplay();
+  const titleEl = document.getElementById('month-title');
+  if (titleEl) titleEl.textContent = `${currentMonth.year}年 ${currentMonth.month}月`;
+
   renderKPI();
   renderProcessMap();
-  renderMachineRanking();
   renderOEERanking();
+  renderRateRanking();
+  renderTrendChart();
+  renderDetailTable();
+  renderProductTable();
+  renderTroubleRanking();
 }
-
-function updateMonthDisplay() {
-  const el = document.getElementById('currentMonth');
-  if (el) el.textContent = `${currentMonth.year}年 ${currentMonth.month}月`;
-}
-
-document.getElementById('prevMonth')?.addEventListener('click', () => {
-  currentMonth.month--;
-  if (currentMonth.month < 1) { currentMonth.month = 12; currentMonth.year--; }
-  renderDashboard();
-});
-
-document.getElementById('nextMonth')?.addEventListener('click', () => {
-  currentMonth.month++;
-  if (currentMonth.month > 12) { currentMonth.month = 1; currentMonth.year++; }
-  renderDashboard();
-});
 
 function renderKPI() {
-  const stats = MACHINES.map(m => getMachineMonthStats(m.id, currentMonth.year, currentMonth.month));
-  const valid = stats.filter(s => s && s.machineRate != null);
+  const stats = MACHINES.map(m => ({
+    machine: m,
+    stat: getMachineMonthStats(m.id, currentMonth.year, currentMonth.month)
+  })).filter(x => x.stat !== null);
 
-  const rates = valid.map(s => s.machineRate * 100);
+  const rates = stats.map(x => x.stat.machineRate * 100);
   const avg = rates.length ? (rates.reduce((a, b) => a + b, 0) / rates.length) : 0;
-  const max = rates.length ? Math.max(...rates) : 0;
-  const low = rates.filter(r => r < 70).length;
-  const active = valid.filter(s => s.workdayCount > 0).length;
+
+  let maxRate = 0, maxName = '--';
+  stats.forEach(x => {
+    const r = x.stat.machineRate * 100;
+    if (r > maxRate) { maxRate = r; maxName = x.machine.name; }
+  });
+
+  const low = rates.filter(r => r < 50).length;
+  const active = stats.filter(x => x.stat.operatingDays > 0).length;
 
   const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-  set('avgRate', avg.toFixed(1) + '%');
-  set('maxRate', max.toFixed(1) + '%');
-  set('lowCount', low + '台');
-  set('activeCount', active + '台');
+  set('kpi-avg', avg.toFixed(1) + '%');
+  set('kpi-max', maxRate.toFixed(1) + '%');
+  set('kpi-max-name', maxName);
+  set('kpi-low', low + '台');
+  set('kpi-active', active + '台');
 }
 
 function renderProcessMap() {
-  const container = document.getElementById('processMap');
+  const container = document.getElementById('process-map');
   if (!container) return;
 
   const processes = [...new Set(MACHINES.map(m => m.process))];
   container.innerHTML = processes.map(proc => {
     const machines = MACHINES.filter(m => m.process === proc);
     const chips = machines.map(m => {
-      const stats = getMachineMonthStats(m.id, currentMonth.year, currentMonth.month);
-      const rate = stats ? stats.machineRate * 100 : 0;
-      const color = !stats ? 'nodata' : rate >= 80 ? 'good' : rate >= 50 ? 'warn' : 'bad';
-      return `<a href="machine.html?id=${m.id}" class="machine-chip ${color}">${m.name}<br>${stats ? rate.toFixed(1) + '%' : 'データなし'}</a>`;
+      const stat = getMachineMonthStats(m.id, currentMonth.year, currentMonth.month);
+      if (!stat) {
+        return `<a href="machine.html?id=${m.id}" style="display:inline-block;margin:4px;padding:8px 12px;border-radius:8px;background:#e5e7eb;color:#374151;text-decoration:none;">${m.name}<br>データなし</a>`;
+      }
+      const rate = stat.machineRate * 100;
+      const bg = rate >= 80 ? '#dcfce7' : rate >= 50 ? '#fef9c3' : '#fee2e2';
+      const color = rate >= 80 ? '#166534' : rate >= 50 ? '#854d0e' : '#991b1b';
+      return `<a href="machine.html?id=${m.id}" style="display:inline-block;margin:4px;padding:8px 12px;border-radius:8px;background:${bg};color:${color};text-decoration:none;font-weight:bold;">${m.name}<br>${rate.toFixed(1)}%</a>`;
     }).join('');
-    return `<div class="process-section"><div class="process-title">${proc}</div><div class="machine-chips">${chips}</div></div>`;
+    return `<div style="margin-bottom:16px;"><div style="font-weight:bold;margin-bottom:6px;">${proc}</div><div>${chips}</div></div>`;
   }).join('');
 }
 
-function renderMachineRanking() {
-  const container = document.getElementById('machineRanking');
+function renderOEERanking() {
+  const container = document.getElementById('oee-ranking');
   if (!container) return;
 
   const stats = MACHINES.map(m => {
     const s = getMachineMonthStats(m.id, currentMonth.year, currentMonth.month);
-    return { name: m.name, id: m.id, rate: s ? s.machineRate * 100 : 0 };
-  }).sort((a, b) => b.rate - a.rate);
+    return { name: m.name, id: m.id, oee: s ? s.oee * 100 : 0, hasData: !!s };
+  }).sort((a, b) => b.oee - a.oee);
 
   container.innerHTML = stats.map((s, i) => `
-    <a href="machine.html?id=${s.id}" class="ranking-item">
-      <span class="rank-no">${i + 1}</span>
-      <span class="rank-name">${s.name}</span>
-      <span class="rank-value">${s.rate.toFixed(1)}%</span>
+    <a href="machine.html?id=${s.id}" style="display:flex;justify-content:space-between;padding:8px 12px;border-bottom:1px solid #e5e7eb;text-decoration:none;color:#111827;">
+      <span>${i + 1}. ${s.name}</span>
+      <span style="font-weight:bold;">${s.hasData ? s.oee.toFixed(1) + '%' : 'データなし'}</span>
     </a>
   `).join('');
 }
 
-function renderOEERanking() {
-  const container = document.getElementById('oeeRanking');
+function renderRateRanking() {
+  const container = document.getElementById('rate-ranking');
   if (!container) return;
 
   const stats = MACHINES.map(m => {
     const s = getMachineMonthStats(m.id, currentMonth.year, currentMonth.month);
-    return { name: m.name, id: m.id, oee: s ? s.oee * 100 : 0 };
-  }).sort((a, b) => b.oee - a.oee);
+    return { name: m.name, id: m.id, rate: s ? s.machineRate * 100 : 0, hasData: !!s };
+  }).sort((a, b) => b.rate - a.rate);
 
   container.innerHTML = stats.map((s, i) => `
-    <a href="machine.html?id=${s.id}" class="ranking-item">
-      <span class="rank-no">${i + 1}</span>
-      <span class="rank-name">${s.name}</span>
-      <span class="rank-value">${s.oee.toFixed(1)}%</span>
+    <a href="machine.html?id=${s.id}" style="display:flex;justify-content:space-between;padding:8px 12px;border-bottom:1px solid #e5e7eb;text-decoration:none;color:#111827;">
+      <span>${i + 1}. ${s.name}</span>
+      <span style="font-weight:bold;">${s.hasData ? s.rate.toFixed(1) + '%' : 'データなし'}</span>
+    </a>
+  `).join('');
+}
+
+let trendChartInstance = null;
+
+function renderTrendChart() {
+  const canvas = document.getElementById('trend-chart');
+  if (!canvas || typeof Chart === 'undefined') return;
+
+  const labels = [];
+  const data = [];
+  for (let m = 1; m <= 6; m++) {
+    const monthStats = MACHINES.map(mc => getMachineMonthStats(mc.id, currentMonth.year, m)).filter(s => s !== null);
+    const rates = monthStats.map(s => s.machineRate * 100);
+    const avg = rates.length ? (rates.reduce((a, b) => a + b, 0) / rates.length) : null;
+    labels.push(`${m}月`);
+    data.push(avg !== null ? avg.toFixed(1) : null);
+  }
+
+  if (trendChartInstance) trendChartInstance.destroy();
+  trendChartInstance = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: '工場平均稼働率(%)',
+        data: data,
+        borderColor: '#3b82f6',
+        backgroundColor: 'rgba(59,130,246,0.15)',
+        tension: 0.3,
+        fill: true
+      }]
+    },
+    options: {
+      scales: { y: { min: 0, max: 120 } }
+    }
+  });
+}
+
+function renderDetailTable() {
+  const tbody = document.getElementById('detail-tbody');
+  if (!tbody) return;
+
+  tbody.innerHTML = MACHINES.map(m => {
+    const s = getMachineMonthStats(m.id, currentMonth.year, currentMonth.month);
+    if (!s) {
+      return `<tr><td>${m.process}</td><td>${m.name}</td><td>-</td><td>-</td><td>-</td><td>-</td><td>データなし</td></tr>`;
+    }
+    const rate = (s.machineRate * 100).toFixed(1);
+    const oee = (s.oee * 100).toFixed(1);
+    const quality = (s.qualityRate * 100).toFixed(1);
+    const status = s.machineRate * 100 >= 80 ? '良好' : s.machineRate * 100 >= 50 ? '注意' : '要確認';
+    return `<tr>
+      <td>${m.process}</td>
+      <td><a href="machine.html?id=${m.id}">${m.name}</a></td>
+      <td>${rate}%</td>
+      <td>${oee}%</td>
+      <td>${quality}%</td>
+      <td>${s.totalTroubleMin}分</td>
+      <td>${status}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderProductTable() {
+  const tbody = document.getElementById('product-tbody');
+  if (!tbody) return;
+
+  const monthStr = `${currentMonth.year}-${String(currentMonth.month).padStart(2, '0')}`;
+
+  tbody.innerHTML = PRODUCTS.map(p => {
+    const recs = RECORDS.filter(r => r.productId === p.id && r.date.startsWith(monthStr));
+    if (recs.length === 0) {
+      return `<tr><td>${p.name}</td><td>0</td><td>-</td><td>-</td><td>-</td></tr>`;
+    }
+    const lots = new Set(recs.map(r => r.lotId)).size;
+    const totalGood = recs.reduce((s, r) => s + r.goodProduction, 0);
+    const totalRaw = recs.reduce((s, r) => s + Math.round(r.goodProduction / r.qualityRate), 0);
+    const qualityRate = totalRaw > 0 ? (totalGood / totalRaw * 100).toFixed(1) : '-';
+
+    return `<tr>
+      <td>${p.name}</td>
+      <td>${lots}</td>
+      <td>${totalRaw.toLocaleString()}</td>
+      <td>${totalGood.toLocaleString()}</td>
+      <td>${qualityRate}%</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderTroubleRanking() {
+  const container = document.getElementById('trouble-ranking');
+  if (!container) return;
+
+  const monthStr = `${currentMonth.year}-${String(currentMonth.month).padStart(2, '0')}`;
+
+  const stats = MACHINES.map(m => {
+    const total = RECORDS.filter(r => r.machineId === m.id && r.date.startsWith(monthStr))
+      .reduce((s, r) => s + r.troubleTime, 0);
+    return { name: m.name, id: m.id, total };
+  }).filter(s => s.total > 0).sort((a, b) => b.total - a.total);
+
+  if (stats.length === 0) {
+    container.innerHTML = '<p style="color:#6b7280;">この月はトラブル停止の記録がありません。</p>';
+    return;
+  }
+
+  container.innerHTML = stats.map((s, i) => `
+    <a href="machine.html?id=${s.id}" style="display:flex;justify-content:space-between;padding:8px 12px;border-bottom:1px solid #e5e7eb;text-decoration:none;color:#111827;">
+      <span>${i + 1}. ${s.name}</span>
+      <span style="font-weight:bold;color:#dc2626;">${s.total}分</span>
     </a>
   `).join('');
 }
@@ -147,7 +266,7 @@ function renderYearlyView() {
   const container = document.getElementById('yearlyTable');
   if (!container) return;
 
-  let html = '<table class="yearly-table"><thead><tr><th>機械名</th>';
+  let html = '<table class="data-table"><thead><tr><th>機械名</th>';
   for (let m = 1; m <= 12; m++) html += `<th>${m}月</th>`;
   html += '<th>年平均</th></tr></thead><tbody>';
 
@@ -160,12 +279,12 @@ function renderYearlyView() {
       const rate = stats ? stats.machineRate * 100 : null;
       if (rate != null) { sum += rate; count++; }
       const display = rate != null ? rate.toFixed(1) + '%' : '-';
-      const colorClass = rate == null ? '' : rate >= 80 ? 'cell-good' : rate >= 50 ? 'cell-warn' : 'cell-bad';
-      html += `<td class="${colorClass}">${display}</td>`;
+      const bg = rate == null ? '' : rate >= 80 ? 'background:#dcfce7;' : rate >= 50 ? 'background:#fef9c3;' : 'background:#fee2e2;';
+      html += `<td style="${bg}">${display}</td>`;
     }
 
     const yearAvg = count ? (sum / count).toFixed(1) + '%' : '-';
-    html += `<td class="year-avg">${yearAvg}</td></tr>`;
+    html += `<td style="font-weight:bold;background:#f1f5f9;">${yearAvg}</td></tr>`;
   });
 
   html += '</tbody></table>';
