@@ -75,7 +75,7 @@ function renderSummary() {
 
   const items = [
     { label: '機械稼働率', value: `${(stats.machineRate * 100).toFixed(1)}%`, desc: '1日7.5hに対する実稼働時間の割合', color: getRateColor(stats.machineRate) },
-    { label: 'OEE', value: `${(stats.oee * 100).toFixed(1)}%`, desc: '稼働率×性能率×良品率。本当の生産性を示す指標', color: getRateColor(stats.oee) },
+    { label: 'OEE', value: `${(stats.oee * 100).toFixed(1)}%`, desc: '稼働率×性能率×良品率。生産性を示す指標', color: getRateColor(stats.oee) },
     { label: '性能率', value: `${(stats.performanceRate * 100).toFixed(1)}%`, desc: '理論目標数に対する良品数の割合', color: getRateColor(stats.performanceRate) },
     { label: '良品率', value: `${(stats.qualityRate * 100).toFixed(1)}%`, desc: '実生産数に対する良品数の割合', color: getRateColor(stats.qualityRate) },
     { label: '完了ロット数', value: `${stats.completedLots}ロット`, desc: 'この月に完了したロットの数', color: '#2563eb' },
